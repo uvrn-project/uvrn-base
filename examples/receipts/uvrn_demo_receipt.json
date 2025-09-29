@@ -1,0 +1,39 @@
+{
+  "uvrn_version": "0.1",
+  "timestamp": "2025-09-29T15:58:47.346261Z",
+  "workspace": "demo_shopify_brand",
+  "checks": [
+    {
+      "id": "tag_presence",
+      "description": "GA4 tag detected on homepage",
+      "status": "pass",
+      "source_link": "https://demo-shop.com/"
+    },
+    {
+      "id": "event_coverage",
+      "description": "Purchase event present in GA4 stream",
+      "status": "pass",
+      "source_link": "https://analytics.google.com/ga4/event/purchase"
+    },
+    {
+      "id": "ads_parity",
+      "description": "Google Ads conversions match GA4 within \u00b115%",
+      "status": "warn",
+      "details": {
+        "ga4_conversions": 100,
+        "ads_conversions": 85,
+        "variance_pct": -15
+      },
+      "source_link": "https://ads.google.com/conversions"
+    }
+  ],
+  "confidence_score": 82,
+  "fix_its": [
+    {
+      "check_id": "ads_parity",
+      "recommendation": "Review GA4 \u2194 Ads conversion import window; align attribution settings.",
+      "artifact": "mapping_guide.csv"
+    }
+  ],
+  "signature": "ed25519-demo-signature-placeholder"
+}
