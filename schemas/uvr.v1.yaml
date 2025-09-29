@@ -1,0 +1,157 @@
+# UVR Receipt Schema — uvr.v1.yaml
+# Spec type: JSON Schema Draft 2020-12 (YAML representation)
+# Purpose: Define a minimal, portable receipt format for verification-first systems.
+# Notes: This aligns to the MVP five checks (tag presence, event coverage, parity, UTM sanity, freshness).
+# License: Apache-2.0 (suggested)
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://uvrn.org/schemas/uvr.v1.yaml"
+title: "UVR Verification Receipt"
+type: object
+required:
+  - uvrn_version
+  - timestamp
+  - workspace
+  - checks
+  - confidence_score
+  - signature
+additionalProperties: false
+
+properties:
+  uvrn_version:
+    type: string
+    description: "Protocol version string (e.g., '0.1', '1.0')."
+    pattern: "^\d+\.\d+(\.\d+)?$"
+
+  timestamp:
+    type: string
+    format: date-time
+    description: "UTC ISO-8601 timestamp representing when verification completed."
+
+  workspace:
+    type: string
+    description: "Human-readable workspace or site identifier (no PII)."
+
+  run:
+    type: object
+    description: "Optional execution metadata for this verification run."
+    additionalProperties: false
+    properties:
+      id:
+        type: string
+        description: "Deterministic run ID or ULID/UUID."
+      range:
+        type: string
+        description: "Data range used for parity/coverage checks (e.g., 'last_7d', '2025-09-01..2025-09-07')."
+      source_links:
+        type: array
+        items:
+          type: string
+          format: uri
+        description: "Optional deep links to GA4, Google Ads, ecommerce, etc."
+
+  checks:
+    type: array
+    minItems: 1
+    description: "Atomic checks performed during verification."
+    items:
+      type: object
+      required: [ id, description, status ]
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+          description: "Stable check key (e.g., 'tag_presence', 'event_coverage', 'ads_parity', 'utm_sanity', 'freshness')."
+        description:
+          type: string
+          description: "Plain-English description of the check."
+        status:
+          type: string
+          enum: [ pass, warn, fail ]
+          description: "Outcome of this check."
+        severity:
+          type: string
+          enum: [ low, medium, high ]
+          description: "Optional severity classification independent of status."
+        details:
+          type: object
+          description: "Machine-readable fields relevant to this check (e.g., counts, thresholds, variances)."
+        threshold:
+          type: number
+          description: "Optional numeric threshold used for validation."
+        variance_pct:
+          type: number
+          description: "Optional percentage variance for parity-style checks."
+        source_link:
+          type: string
+          format: uri
+          description: "Reference link to evidence (logs, dashboards, URLs)."
+
+  confidence_score:
+    type: number
+    minimum: 0
+    maximum: 100
+    description: "0–100 score computed from completeness (40%), parity (40%), freshness (20%), unless otherwise noted in metadata."
+
+  fix_its:
+    type: array
+    description: "Optional actionable remedies derived from failed/warn checks."
+    items:
+      type: object
+      required: [ check_id, recommendation ]
+      additionalProperties: false
+      properties:
+        check_id:
+          type: string
+          description: "The related check.id."
+        recommendation:
+          type: string
+          description: "What to do, in plain English."
+        artifact:
+          type: string
+          description: "Optional artifact filename (e.g., GTM JSON, CSV mapping, snippet)."
+        risk:
+          type: string
+          enum: [ low, medium, high ]
+          description: "Operational risk level if auto-applying the fix."
+
+  signature:
+    type: string
+    description: "Detached or embedded ed25519 signature (base64url)."
+
+  meta:
+    type: object
+    additionalProperties: true
+    description: "Optional extra fields (e.g., signer public key, hash algorithm, implementation info)."
+
+examples:
+  - uvrn_version: "0.1"
+    timestamp: "2025-09-29T01:02:03Z"
+    workspace: "demo_shopify_brand"
+    run:
+      id: "01J9ZK0X9Q6R3F0F0Y0W2R2M7C"
+      range: "last_7d"
+      source_links:
+        - "https://analytics.google.com/ga4/"
+        - "https://ads.google.com/"
+    checks:
+      - id: "tag_presence"
+        description: "GA4 tag detected on homepage"
+        status: "pass"
+        source_link: "https://demo-shop.com/"
+      - id: "event_coverage"
+        description: "Purchase event present in GA4 stream"
+        status: "pass"
+      - id: "ads_parity"
+        description: "Google Ads conversions match GA4 within threshold"
+        status: "warn"
+        variance_pct: -15
+        threshold: 15
+        details: { ga4_conversions: 100, ads_conversions: 85 }
+    confidence_score: 82
+    fix_its:
+      - check_id: "ads_parity"
+        recommendation: "Align GA4-to-Ads import and attribution windows; verify conversion mapping."
+        artifact: "mapping_guide.csv"
+        risk: "medium"
+    signature: "ed25519-demo-signature-placeholder"
